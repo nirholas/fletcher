@@ -215,6 +215,18 @@ describe("formatting", () => {
     expect(parseUsd("170")).toBe(17000000000n);
   });
 
+  it("drops the decimal point entirely at zero places", () => {
+    // The payoff chart's split-point label asks for whole dollars, and a bare trailing dot in
+    // "split 170." reads as a truncation bug to anyone looking at it.
+    expect(formatUsd(parseUsd("170.00"), 0)).toBe("170");
+    expect(formatUsd(parseUsd("178.50"), 0)).toBe("178");
+  });
+
+  it("keeps the sign on a negative", () => {
+    expect(formatUsd(-parseUsd("12.34"))).toBe("-12.34");
+    expect(formatUsd(-parseUsd("12.34"), 0)).toBe("-12");
+  });
+
   it("tolerates thousands separators", () => {
     expect(parseUsd("1,234.56")).toBe(123456000000n);
   });

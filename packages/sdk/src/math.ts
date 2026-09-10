@@ -178,14 +178,16 @@ export function adjustStrike(strikeX8: bigint, c: Classification): bigint {
 // Formatting
 // ---------------------------------------------------------------------------------------------
 
-/** `17850000000n` becomes `"178.50"`. */
+/** `17850000000n` becomes `"178.50"`, or `"178"` at `dp` 0. */
 export function formatUsd(x8: bigint, dp = 2): string {
   const negative = x8 < 0n;
   const v = negative ? -x8 : x8;
   const whole = v / X8;
-  const frac = v % X8;
-  const scaled = (frac * 10n ** BigInt(dp)) / X8;
-  return `${negative ? "-" : ""}${whole}.${scaled.toString().padStart(dp, "0")}`;
+  const sign = negative ? "-" : "";
+  // No decimal point at all when no decimals were asked for, rather than a bare trailing dot.
+  if (dp <= 0) return `${sign}${whole}`;
+  const scaled = ((v % X8) * 10n ** BigInt(dp)) / X8;
+  return `${sign}${whole}.${scaled.toString().padStart(dp, "0")}`;
 }
 
 /** `"178.50"` becomes `17850000000n`. */

@@ -1,0 +1,502 @@
+/*
+ * Fletcher's design tokens.
+ *
+ * One idea drives the palette: FLOOR and TURBO are the two halves of one thing, so they are given
+ * two hues that read as a pair rather than as two unrelated brands, and every chart, badge and
+ * number for a leg uses its hue and only its hue. A reader should be able to glance at a payoff
+ * curve and know which line is theirs without consulting a legend.
+ */
+:root {
+  color-scheme: light dark;
+
+  --bg: #0b0d10;
+  --bg-raised: #14171c;
+  --bg-inset: #0e1116;
+  --border: #222831;
+  --border-strong: #313a47;
+
+  --text: #e8ecf1;
+  --text-dim: #97a2b0;
+  --text-faint: #626e7d;
+
+  --floor: #4ea8de;
+  --floor-dim: #2b6d94;
+  --floor-wash: rgba(78, 168, 222, 0.12);
+
+  --turbo: #f4a259;
+  --turbo-dim: #a86a34;
+  --turbo-wash: rgba(244, 162, 89, 0.12);
+
+  --ok: #5fd08a;
+  --warn: #f4c95d;
+  --bad: #ef6f6c;
+
+  --radius: 10px;
+  --radius-sm: 6px;
+  --gap: 16px;
+
+  --font: ui-sans-serif, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+
+  --ease: cubic-bezier(0.2, 0, 0.2, 1);
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #fbfcfd;
+    --bg-raised: #ffffff;
+    --bg-inset: #f2f4f7;
+    --border: #e2e6ec;
+    --border-strong: #cbd3dd;
+    --text: #10141a;
+    --text-dim: #56606d;
+    --text-faint: #8c96a3;
+    --floor: #1f6f9f;
+    --floor-dim: #4ea8de;
+    --floor-wash: rgba(31, 111, 159, 0.1);
+    --turbo: #c26a1f;
+    --turbo-dim: #f4a259;
+    --turbo-wash: rgba(194, 106, 31, 0.1);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  background: var(--bg-raised);
+  color: var(--text);
+  padding: 10px 16px;
+  z-index: 100;
+  border-radius: 0 0 var(--radius) 0;
+}
+.skip-link:focus {
+  left: 0;
+}
+
+:focus-visible {
+  outline: 2px solid var(--floor);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* --- layout ---------------------------------------------------------------------------------- */
+
+.shell {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 20px 80px;
+}
+
+header.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap);
+  padding: 20px 0 28px;
+  flex-wrap: wrap;
+}
+
+.brand {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  font-size: 19px;
+}
+.brand .tag {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-faint);
+  letter-spacing: 0;
+}
+
+nav.tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--bg-inset);
+  padding: 4px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+nav.tabs button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 7px 14px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 140ms var(--ease), color 140ms var(--ease);
+}
+nav.tabs button:hover {
+  color: var(--text);
+  background: color-mix(in srgb, var(--border) 55%, transparent);
+}
+nav.tabs button[aria-current="page"] {
+  background: var(--bg-raised);
+  color: var(--text);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+
+/* --- panels ---------------------------------------------------------------------------------- */
+
+.panel {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+
+.panel h2 {
+  margin: 0 0 4px;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.panel .sub {
+  margin: 0 0 18px;
+  color: var(--text-dim);
+  font-size: 13px;
+}
+
+.grid {
+  display: grid;
+  gap: var(--gap);
+}
+@media (min-width: 860px) {
+  .grid.two {
+    grid-template-columns: 1.35fr 1fr;
+    align-items: start;
+  }
+}
+
+/* --- the legs -------------------------------------------------------------------------------- */
+
+.leg-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+.leg-badge.floor {
+  color: var(--floor);
+  background: var(--floor-wash);
+}
+.leg-badge.turbo {
+  color: var(--turbo);
+  background: var(--turbo-wash);
+}
+
+/* --- numbers --------------------------------------------------------------------------------- */
+
+.stat-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 1px;
+  /* The divider is the gap showing through, so the backdrop has to be the panel colour: with the
+     border colour behind it, a row whose last column is empty renders that cell as a grey void. */
+  background: var(--bg-raised);
+  box-shadow: inset 0 0 0 1px var(--border);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.stat-row .stat {
+  outline: 1px solid var(--border);
+}
+.stat {
+  background: var(--bg-raised);
+  padding: 12px 14px;
+}
+.stat dt {
+  margin: 0 0 3px;
+  font-size: 11px;
+  color: var(--text-faint);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.stat dd {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+.stat dd.floor {
+  color: var(--floor);
+}
+.stat dd.turbo {
+  color: var(--turbo);
+}
+
+/* --- table ----------------------------------------------------------------------------------- */
+
+table.series {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+table.series th {
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  padding: 0 12px 10px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+table.series th.num,
+table.series td.num {
+  text-align: right;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+table.series td {
+  padding: 11px 12px;
+  border-bottom: 1px solid var(--border);
+}
+table.series tbody tr {
+  cursor: pointer;
+  transition: background 120ms var(--ease);
+}
+table.series tbody tr:hover,
+table.series tbody tr:focus-within {
+  background: var(--bg-inset);
+}
+table.series tbody tr[aria-selected="true"] {
+  background: var(--floor-wash);
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+/* --- form ------------------------------------------------------------------------------------ */
+
+.field {
+  display: block;
+  margin-bottom: 14px;
+}
+.field > span {
+  display: block;
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-bottom: 5px;
+}
+.field input,
+.field select {
+  width: 100%;
+  background: var(--bg-inset);
+  border: 1px solid var(--border-strong);
+  color: var(--text);
+  font: inherit;
+  font-family: var(--mono);
+  font-size: 14px;
+  padding: 9px 11px;
+  border-radius: var(--radius-sm);
+  transition: border-color 140ms var(--ease);
+}
+.field input:hover,
+.field select:hover {
+  border-color: var(--text-faint);
+}
+.field .hint {
+  font-size: 12px;
+  color: var(--text-faint);
+  margin-top: 5px;
+}
+
+button.primary {
+  width: 100%;
+  appearance: none;
+  border: 0;
+  background: var(--floor);
+  color: #06131c;
+  font: inherit;
+  font-weight: 600;
+  font-size: 14px;
+  padding: 11px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: filter 140ms var(--ease), transform 90ms var(--ease);
+}
+button.primary:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+button.primary:active:not(:disabled) {
+  transform: translateY(1px);
+}
+button.primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* --- states ---------------------------------------------------------------------------------- */
+
+.empty,
+.error {
+  text-align: center;
+  padding: 44px 24px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+  color: var(--text-dim);
+}
+.empty h3,
+.error h3 {
+  margin: 0 0 8px;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 600;
+}
+.empty p,
+.error p {
+  margin: 0 auto;
+  max-width: 46ch;
+  font-size: 13.5px;
+}
+.error {
+  border-color: color-mix(in srgb, var(--bad) 45%, transparent);
+}
+.error h3 {
+  color: var(--bad);
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--bg-inset) 25%, var(--border) 50%, var(--bg-inset) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.3s linear infinite;
+  border-radius: var(--radius-sm);
+  height: 14px;
+}
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+  * {
+    transition-duration: 1ms !important;
+  }
+}
+
+.pill {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  letter-spacing: 0.03em;
+}
+.pill.live {
+  color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 14%, transparent);
+}
+.pill.settled {
+  color: var(--text-dim);
+  background: var(--bg-inset);
+}
+.pill.frozen {
+  color: var(--warn);
+  background: color-mix(in srgb, var(--warn) 14%, transparent);
+}
+.pill.halted {
+  color: var(--bad);
+  background: color-mix(in srgb, var(--bad) 14%, transparent);
+}
+
+.note {
+  font-size: 12.5px;
+  color: var(--text-dim);
+  border-left: 2px solid var(--border-strong);
+  padding-left: 12px;
+  margin: 16px 0 0;
+}
+
+/* --- payoff chart ---------------------------------------------------------------------------- */
+
+.chart {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.chart .axis {
+  stroke: var(--border-strong);
+  stroke-width: 1;
+}
+.chart .gridline {
+  stroke: var(--border);
+  stroke-width: 1;
+  stroke-dasharray: 2 4;
+}
+.chart .tick {
+  fill: var(--text-faint);
+  font-size: 11px;
+  font-family: var(--mono);
+}
+@media (max-width: 700px) {
+  /* The SVG scales to the container, so a fixed size shrinks with it. Ticks are sized up here to
+     land at roughly the same rendered size on a phone as on a desktop. */
+  .chart .tick,
+  .chart .strike-label {
+    font-size: 15px;
+  }
+}
+.chart .axis-caption {
+  fill: var(--text-faint);
+  letter-spacing: 0.02em;
+}
+.chart .floor-line {
+  stroke: var(--floor);
+  stroke-width: 2.5;
+  fill: none;
+  stroke-linejoin: round;
+}
+.chart .turbo-line {
+  stroke: var(--turbo);
+  stroke-width: 2.5;
+  fill: none;
+  stroke-linejoin: round;
+}
+.chart .strike-line {
+  stroke: var(--text-faint);
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+}
+.chart .strike-label {
+  fill: var(--text-dim);
+  font-size: 11px;
+  font-family: var(--mono);
+}
+.chart .cursor-line {
+  stroke: var(--text-dim);
+  stroke-width: 1;
+}

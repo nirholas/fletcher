@@ -1,0 +1,22 @@
+{
+  "name": "@fletcher/keeper",
+  "version": "0.1.0",
+  "description": "Records official closes and settles matured Fletcher series",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "check": "tsx src/index.ts --dry-run --once",
+    "test": "vitest run",
+    "lint": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@fletcher/sdk": "workspace:*",
+    "viem": "^2.21.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}
