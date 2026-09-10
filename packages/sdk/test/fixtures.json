@@ -1,0 +1,19 @@
+[
+  {"kind":"settlement","closeX8":"100000000","strikeX8":"17000000000","floorPerUnit":"1000000000000000000","turboPerUnit":"0"},
+  {"kind":"settlement","closeX8":"5000000000","strikeX8":"17000000000","floorPerUnit":"1000000000000000000","turboPerUnit":"0"},
+  {"kind":"settlement","closeX8":"16900000000","strikeX8":"17000000000","floorPerUnit":"1000000000000000000","turboPerUnit":"0"},
+  {"kind":"settlement","closeX8":"17000000000","strikeX8":"17000000000","floorPerUnit":"1000000000000000000","turboPerUnit":"0"},
+  {"kind":"settlement","closeX8":"17100000000","strikeX8":"17000000000","floorPerUnit":"994152046783625730","turboPerUnit":"5847953216374270"},
+  {"kind":"settlement","closeX8":"17850000000","strikeX8":"17000000000","floorPerUnit":"952380952380952380","turboPerUnit":"47619047619047620"},
+  {"kind":"settlement","closeX8":"20000000000","strikeX8":"17000000000","floorPerUnit":"850000000000000000","turboPerUnit":"150000000000000000"},
+  {"kind":"settlement","closeX8":"100000000000","strikeX8":"17000000000","floorPerUnit":"170000000000000000","turboPerUnit":"830000000000000000"},
+  {"kind":"settlement","closeX8":"10000000000000","strikeX8":"17000000000","floorPerUnit":"1700000000000000","turboPerUnit":"998300000000000000"},
+  {"kind":"classification","from":"1000000000000000000","to":"1000000000000000000","result":"none","ratioNum":"1","ratioDen":"1","adjusted170":"17000000000"},
+  {"kind":"classification","from":"1000000000000000000","to":"1000775159164630595","result":"dividend","ratioNum":"1","ratioDen":"1","adjusted170":"17000000000"},
+  {"kind":"classification","from":"1000000000000000000","to":"1030000000000000000","result":"dividend","ratioNum":"1","ratioDen":"1","adjusted170":"17000000000"},
+  {"kind":"classification","from":"1000000000000000000","to":"1030100000000000000","result":"unknown","ratioNum":"0","ratioDen":"0","adjusted170":"17000000000"},
+  {"kind":"classification","from":"1000000000000000000","to":"2000000000000000000","result":"split","ratioNum":"2","ratioDen":"1","adjusted170":"8500000000"},
+  {"kind":"classification","from":"1000000000000000000","to":"1500000000000000000","result":"split","ratioNum":"3","ratioDen":"2","adjusted170":"11333333333"},
+  {"kind":"classification","from":"1000000000000000000","to":"100000000000000000","result":"split","ratioNum":"1","ratioDen":"10","adjusted170":"170000000000"},
+  {"kind":"classification","from":"1000000000000000000","to":"1373000000000000000","result":"unknown","ratioNum":"0","ratioDen":"0","adjusted170":"17000000000"}
+]

@@ -14,6 +14,9 @@ optimizer_runs = 800
 # v4-core's PoolManager does not fit through the IR pipeline's stack allocator (`memPtr is 1 too deep`
 # even with memoryguard on), and it is the build Uniswap ships and audits under the legacy pipeline.
 via_ir = false
+# The fixture test writes into packages/sdk/test so the SDK can be held to the contracts' own
+# arithmetic. Scoped to that one directory rather than granted repo-wide.
+fs_permissions = [{ access = "read-write", path = "../packages/sdk/test" }]
 bytecode_hash = "none"
 
 [profile.default.fuzz]

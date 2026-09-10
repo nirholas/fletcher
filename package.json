@@ -1,0 +1,16 @@
+{
+  "name": "fletcher",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Turbos and floors for tokenized stocks on Robinhood Chain",
+  "type": "module",
+  "scripts": {
+    "build": "pnpm -r build",
+    "test": "pnpm -r test && pnpm test:contracts",
+    "test:contracts": "forge test --root contracts",
+    "test:fork": "forge test --root contracts --match-path 'test/fork/*'",
+    "lint": "pnpm -r lint"
+  },
+  "packageManager": "pnpm@10.32.1",
+  "license": "MIT"
+}
