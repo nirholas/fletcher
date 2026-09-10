@@ -1,0 +1,23 @@
+[profile.default]
+src = "src"
+out = "out"
+libs = ["lib"]
+test = "test"
+script = "script"
+solc_version = "0.8.28"
+optimizer = true
+optimizer_runs = 1000
+via_ir = true
+
+[fmt]
+line_length = 120
+
+[lint]
+# Every deadline in this protocol is a dated series maturity, a settlement window, or a corporate
+# action's effectiveAt, all measured in hours or days. Robinhood Chain is a single-sequencer Orbit
+# rollup, so there is no validator able to shop a timestamp, and no window here is short enough for
+# a second of drift to matter.
+exclude_lints = ["block-timestamp"]
+
+[rpc_endpoints]
+robinhood = "${RHC_RPC_URL}"
