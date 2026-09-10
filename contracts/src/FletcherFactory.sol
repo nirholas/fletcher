@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.28;
+pragma solidity ^0.8.26;
 
 import {LibString} from "solady/utils/LibString.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
@@ -136,13 +136,7 @@ contract FletcherFactory {
         if (wanted > cap) revert CapExceeded(wanted, cap);
         outstandingRaw[stock] = wanted;
 
-        bytes32 salt = keccak256(abi.encode(stock, strikeX8, tradingDay));
-        (string memory fName, string memory fSym, string memory tName, string memory tSym) =
-            _names(s.symbol(), strikeX8, tradingDay);
-
-        series = new Series{salt: salt}(
-            s, strikeX8, maturity, tradingDay, accountant, settlementSource, fName, fSym, tName, tSym
-        );
+        series = _deploy(s, strikeX8, tradingDay, maturity);
 
         seriesFor[stock][strikeX8][tradingDay] = address(series);
         allSeries.push(address(series));
@@ -160,6 +154,19 @@ contract FletcherFactory {
             address(series.floorToken()),
             address(series.turboToken()),
             msg.sender
+        );
+    }
+
+    /// @dev Deployment lives in its own frame. The ten constructor arguments and the four generated
+    /// leg names are wide enough that sharing a stack with the gating locals above overflows the
+    /// legacy pipeline's allocator.
+    function _deploy(IStockToken s, uint256 strikeX8, uint64 tradingDay, uint64 maturity)
+        internal
+        returns (Series)
+    {
+        Names memory n = _names(s.symbol(), strikeX8, tradingDay);
+        return new Series{salt: keccak256(abi.encode(address(s), strikeX8, tradingDay))}(
+            s, strikeX8, maturity, tradingDay, accountant, settlementSource, n.fName, n.fSym, n.tName, n.tSym
         );
     }
 
@@ -185,26 +192,32 @@ contract FletcherFactory {
         return today;
     }
 
+    struct Names {
+        string fName;
+        string fSym;
+        string tName;
+        string tSym;
+    }
+
     function _names(string memory symbol, uint256 strikeX8, uint64 tradingDay)
         internal
         pure
-        returns (string memory, string memory, string memory, string memory)
+        returns (Names memory)
     {
         // Strike rendered in whole dollars, which is how every split point in the product is quoted.
         string memory k = (strikeX8 / 1e8).toString();
         string memory d = uint256(tradingDay).toString();
         string memory stem = string.concat(symbol, "-", k, "-", d);
-        return (
-            string.concat("Fletcher FLOOR ", stem),
-            string.concat("f", stem),
-            string.concat("Fletcher TURBO ", stem),
-            string.concat("t", stem)
-        );
+        return Names({
+            fName: string.concat("Fletcher FLOOR ", stem),
+            fSym: string.concat("f", stem),
+            tName: string.concat("Fletcher TURBO ", stem),
+            tSym: string.concat("t", stem)
+        });
     }
 
     function _initCode(address stock, uint256 strikeX8, uint64 tradingDay) internal view returns (bytes memory) {
-        (string memory fName, string memory fSym, string memory tName, string memory tSym) =
-            _names(IStockToken(stock).symbol(), strikeX8, tradingDay);
+        Names memory n = _names(IStockToken(stock).symbol(), strikeX8, tradingDay);
         return abi.encodePacked(
             type(Series).creationCode,
             abi.encode(
@@ -214,10 +227,10 @@ contract FletcherFactory {
                 tradingDay,
                 accountant,
                 settlementSource,
-                fName,
-                fSym,
-                tName,
-                tSym
+                n.fName,
+                n.fSym,
+                n.tName,
+                n.tSym
             )
         );
     }

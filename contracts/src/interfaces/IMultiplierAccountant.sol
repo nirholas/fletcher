@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.28;
+pragma solidity ^0.8.26;
 
 /// @notice Classifies a change in a stock token's ERC-8056 `uiMultiplier()` and says what it does
 /// to a dated series' split point.

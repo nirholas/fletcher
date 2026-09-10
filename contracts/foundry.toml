@@ -4,20 +4,35 @@ out = "out"
 libs = ["lib"]
 test = "test"
 script = "script"
-solc_version = "0.8.28"
+# Pinned to Uniswap v4-core's own pin. `PoolManager.sol` requires exactly 0.8.26, the launchpad links
+# against it in one compilation unit, and nothing in Fletcher needs a later compiler. Matching it
+# means the v4 code runs at the version Uniswap audited rather than one it was forced onto.
+solc = "0.8.26"
+evm_version = "cancun"
 optimizer = true
-optimizer_runs = 1000
-via_ir = true
+optimizer_runs = 800
+# v4-core's PoolManager does not fit through the IR pipeline's stack allocator (`memPtr is 1 too deep`
+# even with memoryguard on), and it is the build Uniswap ships and audits under the legacy pipeline.
+via_ir = false
+bytecode_hash = "none"
+
+[profile.default.fuzz]
+runs = 512
+
+[profile.ci.fuzz]
+runs = 5000
 
 [fmt]
 line_length = 120
 
 [lint]
-# Every deadline in this protocol is a dated series maturity, a settlement window, or a corporate
-# action's effectiveAt, all measured in hours or days. Robinhood Chain is a single-sequencer Orbit
-# rollup, so there is no validator able to shop a timestamp, and no window here is short enough for
-# a second of drift to matter.
+# Time is load-bearing here: every deadline is a dated maturity, a settlement window, or a corporate
+# action's effectiveAt, measured in hours or days. Robinhood Chain is a single-sequencer Orbit
+# rollup, so there is no validator able to shop a timestamp and no window short enough for drift.
 exclude_lints = ["block-timestamp"]
+# The linter fires on casts in tests whose inputs came from `bound()` and cannot truncate. Annotating
+# each one buries the signal, so `src` is held to a zero-warning standard and tests are excluded.
+ignore = ["test/**/*.sol", "test/*.sol"]
 
 [rpc_endpoints]
 robinhood = "${RHC_RPC_URL}"

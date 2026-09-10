@@ -5,3 +5,4 @@ broadcast/
 .env
 .env.local
 dist/
+contracts/lib/
