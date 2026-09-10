@@ -18,6 +18,10 @@ import {FletcherFactory} from "./FletcherFactory.sol";
 import {Series} from "./Series.sol";
 import {ISettlementSource} from "./interfaces/ISettlementSource.sol";
 
+interface IERC20Minimal {
+    function balanceOf(address account) external view returns (uint256);
+}
+
 /// @title FletcherLaunchpad
 /// @notice Opening a series the way a launchpad opens a coin, not the way a desk opens a book.
 ///
@@ -176,9 +180,24 @@ contract FletcherLaunchpad is IUnlockCallback, ReentrancyGuard {
         l.launcher = msg.sender;
         allLaunches.push(series);
 
+        // A full-range position is sized by whichever side binds first, so the pool takes less than
+        // the deposit on the other side. What never entered the pool is not locked principal, it is
+        // the launcher's own stock and legs, and leaving it here would strand it forever: this
+        // contract has no withdrawal path by design. Returned in the same transaction so no balance
+        // ever sits around to be swept by the next caller's launch.
+        _refund(p.stock, msg.sender);
+        _refund(address(s.floorToken()), msg.sender);
+        _refund(address(s.turboToken()), msg.sender);
+
         emit Launched(
             series, msg.sender, p.stock, l.floorKey.toId(), l.turboKey.toId(), l.floorLiquidity, l.turboLiquidity
         );
+    }
+
+    /// @dev Return whatever of `token` this contract still holds to `to`.
+    function _refund(address token, address to) internal {
+        uint256 balance = IERC20Minimal(token).balanceOf(address(this));
+        if (balance != 0) token.safeTransfer(to, balance);
     }
 
     /// @dev FLOOR's share of a share is `min(P,K)/P`; TURBO's is the remainder. They sum to WAD.

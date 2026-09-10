@@ -51,7 +51,7 @@ const suites = {
   "contracts/test/MultiplierAccountant.t.sol": 16,
   "contracts/test/Series.t.sol": 24,
   "contracts/test/FletcherFactory.t.sol": 14,
-  "contracts/test/Launchpad.t.sol": 7,
+  "contracts/test/Launchpad.t.sol": 10,
   "contracts/test/fork/LiveChain.t.sol": 10,
   "contracts/test/Fixtures.t.sol": 1,
 };

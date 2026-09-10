@@ -4,7 +4,7 @@ Foundry. No owner, no upgrade path, no pause, no fee.
 
 ```bash
 forge build --root .
-forge test --root .                       # 62 tests; the 10 fork tests skip without an endpoint
+forge test --root .                       # 65 tests; the 10 fork tests skip without an endpoint
 RHC_RPC_URL=https://rpc-robinhood.blockmachine.io forge test --root . --match-path 'test/fork/*'
 ```
 

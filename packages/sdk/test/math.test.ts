@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { resolveEquity, EQUITIES } from "../src/chain.js";
 import {
   settlementShares,
   redeemValue,
@@ -229,6 +230,25 @@ describe("formatting", () => {
 
   it("tolerates thousands separators", () => {
     expect(parseUsd("1,234.56")).toBe(123456000000n);
+  });
+});
+
+describe("resolving an equity", () => {
+  it("resolves a known ticker, case-insensitively", () => {
+    expect(resolveEquity("NVDA")).toBe(EQUITIES.NVDA.address);
+    expect(resolveEquity("nvda")).toBe(EQUITIES.NVDA.address);
+    expect(resolveEquity("  SPY ")).toBe(EQUITIES.SPY.address);
+  });
+
+  it("passes an address straight through, since two names is not an allowlist", () => {
+    const address = "0x1234567890abcdef1234567890ABCDEF12345678";
+    expect(resolveEquity(address)).toBe(address);
+  });
+
+  it("returns null rather than a plausible wrong address", () => {
+    expect(resolveEquity("NOTATICKER")).toBeNull();
+    expect(resolveEquity("0xdeadbeef")).toBeNull();
+    expect(resolveEquity("")).toBeNull();
   });
 });
 

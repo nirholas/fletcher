@@ -11,6 +11,7 @@ import {
   parseUsd,
   strikeForLeverage,
   tradingDayFor,
+  resolveEquity,
   WAD,
   type SeriesState,
 } from "@fletcher/sdk";
@@ -158,6 +159,13 @@ async function doLaunch(): Promise<void> {
     return;
   }
 
+  const stock = resolveEquity(state.launch.symbol);
+  if (!stock) {
+    state.message = `Unknown ticker "${state.launch.symbol}". Enter a known symbol or paste the equity's address.`;
+    render();
+    return;
+  }
+
   state.pending = true;
   state.message = null;
   render();
@@ -167,7 +175,7 @@ async function doLaunch(): Promise<void> {
     const days = Math.max(1, Number(state.launch.daysInput) || 1);
     const tradingDay = tradingDayFor(new Date(Date.now() + days * 86_400_000));
     const hash = await client.launch(state.wallet.client, {
-      stock: state.launch.symbol as `0x${string}`,
+      stock,
       strikeX8: strikeForLeverage(spot, leverage),
       tradingDay,
       rawStock: parseEther(state.launch.depositInput || "0"),

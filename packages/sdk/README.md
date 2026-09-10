@@ -39,7 +39,7 @@ So the contracts are the source of truth: `contracts/test/Fixtures.t.sol` genera
 contract change that moves a number fails the Solidity suite too.
 
 ```bash
-pnpm test                                                    # 44 tests, 17 parity cases
+pnpm test                                                    # 47 tests, 17 parity cases
 FLETCHER_WRITE_FIXTURES=1 forge test --root ../../contracts --match-path 'test/Fixtures.t.sol'
 ```
 

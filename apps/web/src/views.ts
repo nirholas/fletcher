@@ -329,7 +329,7 @@ export function launchView(state: LaunchFormState, chrome: LaunchChrome): string
         <label class="field">
           <span>Ticker</span>
           <input type="text" data-input="symbol" value="${escape(state.symbol)}" autocomplete="off" spellcheck="false" />
-          <span class="hint">Must have measured depth in a quote-paired Uniswap v3 pool.</span>
+          <span class="hint">A known symbol, or the equity's address. Must have measured depth in a quote-paired Uniswap v3 pool.</span>
         </label>
         <label class="field">
           <span>Share price (USD)</span>

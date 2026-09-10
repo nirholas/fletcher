@@ -162,6 +162,54 @@ contract LaunchpadTest is Test {
         );
     }
 
+    /// @notice A full-range position is sized by whichever side binds first, so the pool takes less
+    /// than the deposit on the other. Whatever never entered the pool is the launcher's, and the
+    /// launchpad has no withdrawal path, so it must come back in the same transaction or it is
+    /// stranded forever.
+    function test_leftoversGoBackToTheLauncherRatherThanBeingStranded() public {
+        address series = _launch(1000e18);
+
+        assertEq(nvda.balanceOf(address(launchpad)), 0, "no stock stranded in the launchpad");
+        assertEq(
+            Series(series).floorToken().balanceOf(address(launchpad)), 0, "no FLOOR stranded in the launchpad"
+        );
+        assertEq(
+            Series(series).turboToken().balanceOf(address(launchpad)), 0, "no TURBO stranded in the launchpad"
+        );
+    }
+
+    /// @notice And the refund must reach the launcher, not merely leave the contract.
+    function test_theLauncherEndsUpHoldingWhateverThePoolsDidNotTake() public {
+        uint256 before = nvda.balanceOf(launcher);
+        address series = _launch(1000e18);
+
+        uint256 spent = before - nvda.balanceOf(launcher);
+        assertLe(spent, 1000e18, "cannot spend more than was deposited");
+
+        uint256 legs = Series(series).floorToken().balanceOf(launcher)
+            + Series(series).turboToken().balanceOf(launcher);
+        // Something came back: either unseated stock, or legs the pools could not absorb.
+        assertGt(nvda.balanceOf(launcher) + legs, 0);
+    }
+
+    /// @notice A second launch must not be able to sweep a balance the first one left behind.
+    function test_aLaunchCannotSweepAnEarlierLaunchsBalance() public {
+        _launch(1000e18);
+        assertEq(nvda.balanceOf(address(launchpad)), 0);
+
+        vm.prank(launcher);
+        launchpad.launch(
+            FletcherLaunchpad.LaunchParams({
+                stock: address(nvda),
+                strikeX8: 165e8,
+                tradingDay: tradingDay,
+                rawStock: 500e18,
+                referencePriceX8: SPOT
+            })
+        );
+        assertEq(nvda.balanceOf(address(launchpad)), 0, "nothing accumulates between launches");
+    }
+
     function test_unlockCallbackIsNotCallableDirectly() public {
         vm.expectRevert(FletcherLaunchpad.NotPoolManager.selector);
         launchpad.unlockCallback("");

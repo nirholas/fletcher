@@ -67,3 +67,17 @@ export const VERIFIED_POOLS = {
 } as const;
 
 export type EquitySymbol = keyof typeof EQUITIES;
+
+/**
+ * Resolve a ticker or a raw address to an equity address.
+ *
+ * Accepts an address unchanged so a name outside the verified list is still reachable: this is a
+ * convenience for the common names, not an allowlist. The chain decides what may carry a series,
+ * through `DepthGate`, and there are 254 equities to this file's two.
+ */
+export function resolveEquity(input: string): `0x${string}` | null {
+  const trimmed = input.trim();
+  if (/^0x[0-9a-fA-F]{40}$/.test(trimmed)) return trimmed as `0x${string}`;
+  const match = EQUITIES[trimmed.toUpperCase() as EquitySymbol];
+  return match ? (match.address as `0x${string}`) : null;
+}
