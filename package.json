@@ -5,11 +5,14 @@
   "description": "Turbos and floors for tokenized stocks on Robinhood Chain",
   "type": "module",
   "scripts": {
-    "build": "pnpm -r build",
-    "test": "pnpm -r test && pnpm test:contracts",
+    "build": "node scripts/extract-abis.mjs && pnpm -r build",
+    "test": "pnpm test:contracts && pnpm -r test && pnpm check:docs",
     "test:contracts": "forge test --root contracts",
     "test:fork": "forge test --root contracts --match-path 'test/fork/*'",
-    "lint": "pnpm -r lint"
+    "check:docs": "node scripts/check-docs.mjs",
+    "abis": "node scripts/extract-abis.mjs",
+    "lint": "pnpm -r lint",
+    "dev": "pnpm --filter @fletcher/web dev"
   },
   "packageManager": "pnpm@10.32.1",
   "license": "MIT"
