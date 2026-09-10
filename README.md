@@ -227,4 +227,5 @@ Fletcher is the fourth protocol in a series built on Robinhood Chain's tokenized
 
 ## License
 
-MIT.
+All rights reserved. Copyright (c) 2026 nirholas. This is proprietary source: reading it here
+grants no license to use, copy, modify, or distribute it. See [`LICENSE`](LICENSE).

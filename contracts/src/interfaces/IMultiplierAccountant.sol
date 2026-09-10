@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.26;
 
 /// @notice Classifies a change in a stock token's ERC-8056 `uiMultiplier()` and says what it does
