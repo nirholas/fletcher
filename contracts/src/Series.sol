@@ -103,6 +103,13 @@ contract Series is ReentrancyGuard {
 
     uint256 internal constant WAD = 1e18;
 
+    /// @notice How long a scheduled-but-unapplied corporate action may block settlement.
+    ///
+    /// Long enough that any real corporate action lands first (they are scheduled days ahead, not
+    /// months), and short enough that an action the issuer never applies cannot strand a dated
+    /// series permanently.
+    uint256 public constant PENDING_ACTION_GRACE = 30 days;
+
     // ---------------------------------------------------------------------------------------
     // Events
     // ---------------------------------------------------------------------------------------
@@ -257,8 +264,18 @@ contract Series is ReentrancyGuard {
 
         // A corporate action scheduled to land at or before this series' maturity has not been
         // folded into the strike yet, and settling in front of it would settle the wrong terms.
+        //
+        // But this gate cannot be unconditional. The issuer schedules these, and nothing obliges
+        // them to ever apply one: a scheduled action left pending forever would block settlement
+        // forever, and a series that can never settle is one whose holders are left with merge as
+        // their only exit for the rest of time. So the refusal expires. After `PENDING_ACTION_GRACE`
+        // past maturity the series settles on the terms it can actually observe, which is strictly
+        // better than never resolving.
         uint256 pending = stock.newUIMultiplier();
-        if (pending != stock.uiMultiplier() && stock.effectiveAt() <= maturity) {
+        if (
+            pending != stock.uiMultiplier() && stock.effectiveAt() <= maturity
+                && block.timestamp < uint256(maturity) + PENDING_ACTION_GRACE
+        ) {
             revert CorporateActionPending();
         }
 

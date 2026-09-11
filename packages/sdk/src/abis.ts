@@ -55,6 +55,19 @@ export const fletcherfactoryAbi = [
   },
   {
     "type": "function",
+    "name": "MAX_TURBO_LEVERAGE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "MIN_STRIKE_BPS",
     "inputs": [],
     "outputs": [
@@ -213,25 +226,6 @@ export const fletcherfactoryAbi = [
   },
   {
     "type": "function",
-    "name": "outstandingRaw",
-    "inputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "seriesCount",
     "inputs": [],
     "outputs": [
@@ -352,22 +346,6 @@ export const fletcherfactoryAbi = [
   },
   {
     "type": "error",
-    "name": "CapExceeded",
-    "inputs": [
-      {
-        "name": "wanted",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "cap",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ]
-  },
-  {
-    "type": "error",
     "name": "NotDepthQualified",
     "inputs": [
       {
@@ -456,6 +434,19 @@ export const seriesAbi = [
       }
     ],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "PENDING_ACTION_GRACE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -1580,27 +1571,91 @@ export const depthgateAbi = [
         "internalType": "address"
       },
       {
-        "name": "minDepthRaw_",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "capBps_",
-        "type": "uint256",
-        "internalType": "uint256"
+        "name": "minLiquidity_",
+        "type": "uint128",
+        "internalType": "uint128"
       }
     ],
     "stateMutability": "nonpayable"
   },
   {
     "type": "function",
-    "name": "capBps",
+    "name": "DEPTH_WINDOW",
     "inputs": [],
     "outputs": [
       {
         "name": "",
         "type": "uint256",
         "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "MIN_CHECKPOINT_INTERVAL",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "REQUIRED_CHECKPOINTS",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "checkpoint",
+    "inputs": [
+      {
+        "name": "stock",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "depth",
+        "type": "uint128",
+        "internalType": "uint128"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "currentLiquidity",
+    "inputs": [
+      {
+        "name": "stock",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "depth",
+        "type": "uint128",
+        "internalType": "uint128"
+      },
+      {
+        "name": "deepestPool",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "stateMutability": "view"
@@ -1626,44 +1681,20 @@ export const depthgateAbi = [
   },
   {
     "type": "function",
-    "name": "measuredDepth",
-    "inputs": [
-      {
-        "name": "stock",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "depthRaw",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "deepestPool",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "minDepthRaw",
+    "name": "minLiquidity",
     "inputs": [],
     "outputs": [
       {
         "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "uint128",
+        "internalType": "uint128"
       }
     ],
     "stateMutability": "view"
   },
   {
     "type": "function",
-    "name": "notionalCapRaw",
+    "name": "nextCheckpointAt",
     "inputs": [
       {
         "name": "stock",
@@ -1676,6 +1707,37 @@ export const depthgateAbi = [
         "name": "",
         "type": "uint256",
         "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "observations",
+    "inputs": [
+      {
+        "name": "stock",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "tuple[3]",
+        "internalType": "struct DepthGate.Observation[3]",
+        "components": [
+          {
+            "name": "at",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "liquidity",
+            "type": "uint128",
+            "internalType": "uint128"
+          }
+        ]
       }
     ],
     "stateMutability": "view"
@@ -1724,6 +1786,64 @@ export const depthgateAbi = [
       }
     ],
     "stateMutability": "view"
+  },
+  {
+    "type": "event",
+    "name": "Checkpointed",
+    "inputs": [
+      {
+        "name": "stock",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "liquidity",
+        "type": "uint128",
+        "indexed": false,
+        "internalType": "uint128"
+      },
+      {
+        "name": "pool",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      },
+      {
+        "name": "at",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "error",
+    "name": "NoPool",
+    "inputs": [
+      {
+        "name": "stock",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "TooSoon",
+    "inputs": [
+      {
+        "name": "stock",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "nextAllowedAt",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
   }
 ] as const;
 
@@ -1748,6 +1868,19 @@ export const fletcherlaunchpadAbi = [
       }
     ],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "LIQUIDITY_UNLOCK_DELAY",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -2053,6 +2186,38 @@ export const fletcherlaunchpadAbi = [
     "stateMutability": "nonpayable"
   },
   {
+    "type": "function",
+    "name": "unlockedAt",
+    "inputs": [
+      {
+        "name": "series",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "withdrawPrincipal",
+    "inputs": [
+      {
+        "name": "series",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
     "type": "event",
     "name": "FeesCollected",
     "inputs": [
@@ -2133,6 +2298,42 @@ export const fletcherlaunchpadAbi = [
     "anonymous": false
   },
   {
+    "type": "event",
+    "name": "PrincipalWithdrawn",
+    "inputs": [
+      {
+        "name": "series",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "to",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "floorLiquidity",
+        "type": "uint128",
+        "indexed": false,
+        "internalType": "uint128"
+      },
+      {
+        "name": "turboLiquidity",
+        "type": "uint128",
+        "indexed": false,
+        "internalType": "uint128"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "error",
+    "name": "AlreadyWithdrawn",
+    "inputs": []
+  },
+  {
     "type": "error",
     "name": "NotLauncher",
     "inputs": []
@@ -2167,6 +2368,17 @@ export const fletcherlaunchpadAbi = [
     "type": "error",
     "name": "Reentrancy",
     "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "StillLocked",
+    "inputs": [
+      {
+        "name": "unlockedAt",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
   },
   {
     "type": "error",
@@ -2276,6 +2488,30 @@ export const sherwoodsettlementsourceAbi = [
       }
     ],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "referencePrice",
+    "inputs": [
+      {
+        "name": "stock",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "priceX8",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "observedAt",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -2399,12 +2635,17 @@ export const sherwoodsettlementsourceAbi = [
   },
   {
     "type": "error",
-    "name": "SessionOpen",
+    "name": "SessionNotClosed",
     "inputs": [
       {
         "name": "stock",
         "type": "address",
         "internalType": "address"
+      },
+      {
+        "name": "session",
+        "type": "uint8",
+        "internalType": "uint8"
       }
     ]
   }

@@ -111,26 +111,30 @@ contract LiveChainTest is Test {
         assertFalse(IStockToken(SPY).tokenPaused());
     }
 
-    /// @notice `DepthGate` reads a real pool, not a number someone set.
+    /// @notice `DepthGate` reads real in-range liquidity from a real pool.
     function test_depthGateMeasuresRealLiquidity() public onlyForked {
-        DepthGate gate = new DepthGate(UNISWAP_V3_FACTORY, USDG, 1e18, 1_500);
-        (uint256 depth, address pool) = gate.measuredDepth(NVDA);
+        DepthGate gate = new DepthGate(UNISWAP_V3_FACTORY, USDG, 1e15);
+        (uint128 depth, address pool) = gate.currentLiquidity(NVDA);
 
-        assertGt(depth, 0, "NVDA has measurable on-chain depth");
+        assertGt(depth, 0, "NVDA has in-range liquidity");
         assertEq(pool, NVDA_USDG_POOL, "and it is the pool the address book names");
-        assertTrue(gate.qualifies(NVDA));
-
-        // The cap is a fraction of that depth, which is the constraint that actually binds the
-        // protocol's size.
-        assertEq(gate.notionalCapRaw(NVDA), (depth * 1_500) / 10_000);
     }
 
-    /// @notice A name with no quote-paired pool must not qualify, whatever its market cap.
+    /// @notice One reading never qualifies a name, however deep the pool is right now. That is the
+    /// whole point: a book present in the calling block can be arranged in the calling block.
+    function test_oneCheckpointNeverQualifiesAName() public onlyForked {
+        DepthGate gate = new DepthGate(UNISWAP_V3_FACTORY, USDG, 1e15);
+        gate.checkpoint(NVDA);
+        assertFalse(gate.qualifies(NVDA), "a single observation is not a sustained book");
+    }
+
+    /// @notice A name with no quote-paired pool has nothing to checkpoint.
     function test_depthGateRefusesAnUnpairedName() public onlyForked {
-        // A depth floor above the deepest pool's balance disqualifies even a real, liquid name.
-        DepthGate strict = new DepthGate(UNISWAP_V3_FACTORY, USDG, type(uint128).max, 1_500);
-        assertFalse(strict.qualifies(NVDA));
-        assertEq(strict.notionalCapRaw(NVDA), 0);
+        DepthGate gate = new DepthGate(UNISWAP_V3_FACTORY, USDG, 1e15);
+        address notAnEquity = address(0xDEAD);
+        vm.expectRevert(abi.encodeWithSelector(DepthGate.NoPool.selector, notAnEquity));
+        gate.checkpoint(notAnEquity);
+        assertFalse(gate.qualifies(notAnEquity));
     }
 
     /// @notice Uniswap v4 really is deployed where the launchpad points.

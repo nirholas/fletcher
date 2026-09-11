@@ -26,24 +26,23 @@ import {ISettlementSource} from "../src/interfaces/ISettlementSource.sol";
 ///
 /// Optional, defaulting to the verified Robinhood Chain addresses:
 ///   UNISWAP_V3_FACTORY, UNISWAP_V4_POOL_MANAGER, QUOTE_TOKEN
-///   MIN_DEPTH_RAW      floor on a name's deepest pool balance. Default 1,000 shares.
-///   DEPTH_CAP_BPS      outstanding notional allowed, as bps of depth. Default 1,500 (15%).
+///   MIN_LIQUIDITY      floor on a name's in-range pool liquidity, held across the depth window.
 contract Deploy is Script {
     address internal constant DEFAULT_V3_FACTORY = 0x1f7d7550B1b028f7571E69A784071F0205FD2EfA;
     address internal constant DEFAULT_V4_POOL_MANAGER = 0x8366a39CC670B4001A1121B8F6A443A643e40951;
     address internal constant DEFAULT_QUOTE = 0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168; // USDG
 
-    /// @dev 15% of measured depth. The number is a judgement about how much of a book a protocol may
-    /// represent before its own unwind is the market, not a value anyone tunes for yield.
-    uint256 internal constant DEFAULT_CAP_BPS = 1_500;
+    /// @dev Floor on the in-range liquidity a name must hold across the whole depth window. A
+    /// judgement about how thin a book may be before an instrument on it cannot be exited, not a
+    /// value anyone tunes for yield.
+    uint128 internal constant DEFAULT_MIN_LIQUIDITY = 1e15;
 
     function run() external {
         address sherwoodOracle = vm.envAddress("SHERWOOD_ORACLE");
         address v3Factory = vm.envOr("UNISWAP_V3_FACTORY", DEFAULT_V3_FACTORY);
         address poolManager = vm.envOr("UNISWAP_V4_POOL_MANAGER", DEFAULT_V4_POOL_MANAGER);
         address quote = vm.envOr("QUOTE_TOKEN", DEFAULT_QUOTE);
-        uint256 minDepthRaw = vm.envOr("MIN_DEPTH_RAW", uint256(1_000e18));
-        uint256 capBps = vm.envOr("DEPTH_CAP_BPS", DEFAULT_CAP_BPS);
+        uint128 minLiquidity = uint128(vm.envOr("MIN_LIQUIDITY", uint256(DEFAULT_MIN_LIQUIDITY)));
 
         require(sherwoodOracle.code.length > 0, "SHERWOOD_ORACLE holds no code");
         require(poolManager.code.length > 0, "UNISWAP_V4_POOL_MANAGER holds no code");
@@ -53,7 +52,7 @@ contract Deploy is Script {
 
         MultiplierAccountant accountant = new MultiplierAccountant();
         SherwoodSettlementSource source = new SherwoodSettlementSource(ISherwoodOracle(sherwoodOracle));
-        DepthGate gate = new DepthGate(v3Factory, quote, minDepthRaw, capBps);
+        DepthGate gate = new DepthGate(v3Factory, quote, minLiquidity);
         FletcherFactory factory = new FletcherFactory(
             IMultiplierAccountant(address(accountant)), ISettlementSource(address(source)), gate
         );

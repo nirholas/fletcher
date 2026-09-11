@@ -12,12 +12,31 @@ contract SettlementSourceHarness is ISettlementSource {
     mapping(address => mapping(uint64 => uint256)) public prices;
     mapping(address => mapping(uint64 => bool)) public recorded;
     mapping(address => Session) public sessions;
+    mapping(address => uint256) public referenceOf;
 
     error NoClose();
+    error NoReference();
 
     function setClose(address stock, uint64 day, uint256 priceX8) external {
         prices[stock][day] = priceX8;
         recorded[stock][day] = true;
+        // A recorded close also makes a sensible default reference, so a test that only cares about
+        // settlement does not have to set both.
+        if (referenceOf[stock] == 0) referenceOf[stock] = priceX8;
+    }
+
+    function setReference(address stock, uint256 priceX8) external {
+        referenceOf[stock] = priceX8;
+    }
+
+    function clearReference(address stock) external {
+        referenceOf[stock] = 0;
+    }
+
+    function referencePrice(address stock) external view returns (uint256, uint64) {
+        uint256 p = referenceOf[stock];
+        if (p == 0) revert NoReference();
+        return (p, uint64(block.timestamp));
     }
 
     function clearClose(address stock, uint64 day) external {

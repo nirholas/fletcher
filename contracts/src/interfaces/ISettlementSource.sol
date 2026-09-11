@@ -34,4 +34,18 @@ interface ISettlementSource {
 
     /// @notice The venue session the source believes `stock` is in.
     function sessionOf(address stock) external view returns (Session);
+
+    /// @notice A live reference price for `stock`, 1e8-scaled USD per share.
+    ///
+    /// Deliberately separate from `officialClose`. A series SETTLES on a dated, write-once close,
+    /// which must never be substitutable. Creation only needs to know roughly where the share
+    /// trades, so that a split point cannot be struck at a number the market never saw.
+    ///
+    /// Answering the second question from the first was a real defect: creation walked back through
+    /// recorded closes, so a lapse in recording (a long holiday, a keeper outage) eventually ran
+    /// past the lookback and bricked creation for every name, with no path back except recording a
+    /// close nobody could still record. A live quote has no such history to lapse.
+    ///
+    /// MUST revert rather than return a stale or unusable price.
+    function referencePrice(address stock) external view returns (uint256 priceX8, uint64 observedAt);
 }

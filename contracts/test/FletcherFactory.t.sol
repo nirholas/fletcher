@@ -92,17 +92,31 @@ contract FletcherFactoryTest is Test {
         factory.createSeries(address(thin), 45e8, tradingDay, 100e18, alice);
     }
 
-    /// @notice Outstanding notional is capped at a fraction of measured depth, because the book size
-    /// this protocol can carry is set by the AMM it unwinds into, not by demand for leverage.
-    function test_notionalIsCappedAtAFractionOfDepth() public {
+    /// @notice There is deliberately no outstanding-notional cap. The earlier one accumulated per
+    /// name and never decremented, so ordinary use walked a ticker to its ceiling and bricked it
+    /// permanently, and it bound the wrong call anyway: `Series.mint` reaches any size without
+    /// touching the factory. The depth gate gates listing, not size.
+    function test_repeatedCreationDoesNotBrickATicker() public {
         gate.setDepth(address(nvda), 1000e18);
-        gate.setCapBps(1500); // 15% of depth
 
-        _create(STRIKE, tradingDay, 100e18);
+        // Well past what the old 15%-of-depth ceiling would have allowed, and past the measured
+        // depth itself. None of it accumulates into a number that gates a later call.
+        _create(STRIKE, tradingDay, 400e18);
+        _create(165e8, tradingDay, 400e18);
+        _create(STRIKE, tradingDay + 1, 400e18);
 
-        vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(FletcherFactory.CapExceeded.selector, 200e18, 150e18));
-        factory.createSeries(address(nvda), 165e8, tradingDay, 100e18, alice);
+        assertEq(factory.seriesCount(), 3, "a name stays listable however much has been minted on it");
+    }
+
+    /// @notice And minting into a series directly is permissionless, which is exactly why a cap on
+    /// creation could never have bound total size.
+    function test_mintingIntoASeriesIsNotGatedByTheFactory() public {
+        Series s = _create(STRIKE, tradingDay, 10e18);
+        vm.startPrank(alice);
+        nvda.approve(address(s), type(uint256).max);
+        s.mint(alice, 5000e18);
+        vm.stopPrank();
+        assertEq(s.floorToken().balanceOf(alice), 5010e18);
     }
 
     function test_haltedNameIsRefused() public {
@@ -151,9 +165,36 @@ contract FletcherFactoryTest is Test {
 
     function test_manyStrikesAndDatesCoexist() public {
         _create(STRIKE, tradingDay, 100e18);
-        _create(175e8, tradingDay, 100e18);
+        _create(174e8, tradingDay, 100e18);
         _create(STRIKE, tradingDay + 1, 100e18);
         assertEq(factory.seriesCount(), 3, "the market picks the menu, not a listing committee");
+    }
+
+    /// @notice Leverage is `p / (p - k)`, so the ceiling on the strike IS the ceiling on leverage.
+    /// A strike at 99% of spot is 100x on an instrument settling tomorrow, which is a coin flip
+    /// rather than a leverage product: a 1% move against the holder takes the whole position.
+    function test_strikeBandCapsLeverageAtFiftyX() public {
+        // 98% of 178.50 is 174.93, which is 51x and must be refused.
+        vm.prank(alice);
+        vm.expectRevert(FletcherFactory.BadStrike.selector);
+        factory.createSeries(address(nvda), 175e8, tradingDay, 100e18, alice);
+
+        // Just inside the band is accepted, and lands under the stated ceiling.
+        Series s = _create(174e8, tradingDay, 100e18);
+        assertLe(s.turboLeverage1e18(SPOT), factory.MAX_TURBO_LEVERAGE(), "within the documented cap");
+    }
+
+    /// @notice Creation reads a live reference price, never a recorded close. An earlier version
+    /// walked back through recorded closes, so a long enough gap in recording bricked creation for
+    /// every name at once with no way back.
+    function test_creationSurvivesAGapInRecordedCloses() public {
+        // No close has ever been recorded for this day or any recent one.
+        source.clearClose(address(nvda), uint64(block.timestamp / 1 days));
+        assertFalse(source.hasClose(address(nvda), uint64(block.timestamp / 1 days)));
+
+        // Creation still works, because it never depended on that history.
+        Series s = _create(STRIKE, tradingDay, 100e18);
+        assertEq(s.strikeX8(), STRIKE);
     }
 
     function test_maturityIsTheDayPlusTheSettlementOffset() public view {

@@ -22,6 +22,20 @@ import {DepthGate} from "./DepthGate.sol";
 /// Deployment is CREATE2 on the series' own terms, so `(stock, strike, maturity)` names exactly one
 /// series address forever. Two callers racing to open the same series cannot fragment it into two
 /// half-liquid copies, and an integrator can compute the address before it exists.
+///
+/// # There is deliberately no outstanding-notional cap
+///
+/// An earlier version accumulated raw stock per name and refused creation past a fraction of
+/// measured depth. It was removed because it was both bypassable and permanently destructive:
+///
+///   - `Series.mint` is permissionless and does not touch the factory, so any size could be reached
+///     by creating a minimal series and minting into it directly. The cap bound the wrong call.
+///   - Nothing ever decremented it. Merging and settling returned the stock but left the counter at
+///     its high-water mark, so a name accumulated toward its ceiling and then could never carry a
+///     new series again. A ticker bricked itself within days of ordinary use.
+///
+/// The depth gate now gates **listing**, not size: a name either has a sustained book or it does
+/// not. Nothing in this protocol accumulates a number that gates a later operation.
 contract FletcherFactory {
     using SafeTransferLib for address;
     using LibString for uint256;
@@ -47,8 +61,17 @@ contract FletcherFactory {
     /// @dev Below this, FLOOR is a leveraged instrument wearing a savings product's name.
     uint256 public constant MIN_STRIKE_BPS = 1_000;
 
-    /// @notice And at most this share, so TURBO is never struck so far above spot that it is dust.
-    uint256 public constant MAX_STRIKE_BPS = 9_900;
+    /// @notice And at most this share of spot, which is what actually bounds TURBO's leverage.
+    ///
+    /// Leverage is `p / (p - k)`, so the ceiling on `k` IS the ceiling on leverage: a strike at 99%
+    /// of spot is 100x, and 100x on an instrument that settles tomorrow is not a leverage product,
+    /// it is a coin flip where a 1% move against the holder takes the entire position. 98% caps it
+    /// at 50x, which is still far beyond anything a listed turbo offers.
+    uint256 public constant MAX_STRIKE_BPS = 9_800;
+
+    /// @notice The leverage `MAX_STRIKE_BPS` implies, 1e18-scaled. Exposed so the bound is checkable
+    /// rather than something a reader has to derive from a basis-point constant.
+    uint256 public constant MAX_TURBO_LEVERAGE = 50e18;
 
     uint256 internal constant BPS = 10_000;
 
@@ -58,8 +81,6 @@ contract FletcherFactory {
     /// @notice `seriesFor[stock][strikeX8][maturity]`.
     mapping(address => mapping(uint256 => mapping(uint64 => address))) public seriesFor;
 
-    /// @notice Total raw stock currently held across live series for a name, against the cap.
-    mapping(address => uint256) public outstandingRaw;
 
     event SeriesCreated(
         address indexed series,
@@ -77,7 +98,6 @@ contract FletcherFactory {
     error BadMaturity();
     error BadStrike();
     error SeriesExists(address existing);
-    error CapExceeded(uint256 wanted, uint256 cap);
     error ZeroAmount();
 
     constructor(IMultiplierAccountant accountant_, ISettlementSource settlementSource_, DepthGate depthGate_) {
@@ -131,11 +151,6 @@ contract FletcherFactory {
 
         _checkStrike(stock, strikeX8);
 
-        uint256 cap = depthGate.notionalCapRaw(stock);
-        uint256 wanted = outstandingRaw[stock] + rawStock;
-        if (wanted > cap) revert CapExceeded(wanted, cap);
-        outstandingRaw[stock] = wanted;
-
         series = _deploy(s, strikeX8, tradingDay, maturity);
 
         seriesFor[stock][strikeX8][tradingDay] = address(series);
@@ -170,26 +185,19 @@ contract FletcherFactory {
         );
     }
 
-    /// @dev The strike band is checked against the settlement source's own view of the equity, not
+    /// @dev The strike band is checked against the settlement source's live reference price, not
     /// against a pool. A caller who could pick the reference price could open a series struck at a
     /// number the market never traded at and mint TURBO that is already deep in the money.
+    ///
+    /// It reads `referencePrice`, NOT a recorded close. Creation must not depend on a history that
+    /// can lapse: walking back through recorded closes meant a long enough gap in recording bricked
+    /// creation for every name at once.
     function _checkStrike(address stock, uint256 strikeX8) internal view {
-        (uint256 refX8,) = settlementSource.officialClose(stock, _latestSettledDay(stock));
+        (uint256 refX8,) = settlementSource.referencePrice(stock);
         if (refX8 == 0) revert BadStrike();
         uint256 lo = (refX8 * MIN_STRIKE_BPS) / BPS;
         uint256 hi = (refX8 * MAX_STRIKE_BPS) / BPS;
         if (strikeX8 < lo || strikeX8 > hi) revert BadStrike();
-    }
-
-    /// @dev The most recent trading day the source can price. Walks back at most a week, which
-    /// covers a long weekend plus a holiday and stops well short of pricing off a stale print.
-    function _latestSettledDay(address stock) internal view returns (uint64) {
-        uint64 today = uint64(block.timestamp / 1 days);
-        for (uint64 back = 0; back <= 7; ++back) {
-            uint64 day = today - back;
-            if (settlementSource.hasClose(stock, day)) return day;
-        }
-        return today;
     }
 
     struct Names {

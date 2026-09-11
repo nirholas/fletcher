@@ -46,11 +46,19 @@ interface IERC20Minimal {
 /// and any deviation is an arbitrage that ends in a `merge()`. Quoted in a stablecoin the same
 /// relationship exists but nobody can see it. PAIR reached the same conclusion for the same reason.
 ///
-/// # Why the principal can never come out
+/// # Why the principal is locked until the instrument is over, and not one day longer
 ///
-/// There is no code path in this contract that passes a negative liquidity delta. Locking is not a
-/// timelock that expires or an admin promise; it is the absence of the function. `collectFees` runs
-/// `modifyLiquidity` with a delta of zero, which returns accrued fees and cannot touch principal.
+/// Liquidity is locked for the life of the series: `withdrawPrincipal` reverts until
+/// `maturity + LIQUIDITY_UNLOCK_DELAY`, and nothing else in this contract ever passes a negative
+/// liquidity delta. `collectFees` runs `modifyLiquidity` at zero, which returns accrued fees and
+/// cannot touch principal.
+///
+/// An earlier version locked it forever, which is right for a perpetual token and wrong here. These
+/// are **dated** instruments. After settlement both legs are fixed claims on a settled vault and
+/// then, once redeemed, worth nothing at all, so liquidity left in those pools is not a commitment
+/// to a market, it is a launcher's principal destroyed on a book nobody will ever trade again. A
+/// launchpad whose only rational participant is someone who does not mind burning their stake has
+/// no participants. The lock has to outlive the instrument, not the launcher.
 contract FletcherLaunchpad is IUnlockCallback, ReentrancyGuard {
     using CurrencyLibrary for Currency;
     using PoolIdLibrary for PoolKey;
@@ -67,6 +75,12 @@ contract FletcherLaunchpad is IUnlockCallback, ReentrancyGuard {
 
     /// @notice Tick spacing paired with `LP_FEE`.
     int24 public constant TICK_SPACING = 200;
+
+    /// @notice How long after maturity the seeded liquidity stays locked.
+    ///
+    /// Past maturity the legs are fixed claims, so the book has nothing left to price. The delay
+    /// exists only so holders who are slow to redeem still find a market, not to bind the launcher.
+    uint256 public constant LIQUIDITY_UNLOCK_DELAY = 30 days;
 
     /// @notice How far the seeded price may sit from the strike-implied parity split, in bps.
     /// @dev The launcher supplies the opening price and the contract bounds it. An unbounded
@@ -101,12 +115,15 @@ contract FletcherLaunchpad is IUnlockCallback, ReentrancyGuard {
         uint128 turboLiquidity
     );
     event FeesCollected(address indexed series, address indexed to, uint256 floorLegAmount, uint256 turboLegAmount);
+    event PrincipalWithdrawn(address indexed series, address indexed to, uint128 floorLiquidity, uint128 turboLiquidity);
 
     error NotLauncher();
     error UnknownSeries();
     error OpeningPriceOutOfBand(uint256 impliedX18, uint256 suppliedX18);
     error NotPoolManager();
     error NothingSeeded();
+    error StillLocked(uint256 unlockedAt);
+    error AlreadyWithdrawn();
 
     constructor(IPoolManager poolManager_, FletcherFactory factory_, ISettlementSource settlementSource_) {
         poolManager = poolManager_;
@@ -208,22 +225,18 @@ contract FletcherLaunchpad is IUnlockCallback, ReentrancyGuard {
         return (floorShare, WAD - floorShare);
     }
 
-    /// @dev The reference price must match what the settlement source last published. Otherwise a
-    /// launcher could seed at a price of their own invention and sell the mispriced leg.
+    /// @dev The reference price must match what the settlement source says the share is worth.
+    /// Otherwise a launcher could seed at a price of their own invention and sell the mispriced leg.
+    ///
+    /// Reads the live `referencePrice`, not a recorded close, for the same reason creation does: a
+    /// launch must not be blocked by a gap in a recorded history.
     function _requireReferenceIsHonest(address stock, uint256 referencePriceX8) internal view {
-        uint64 today = uint64(block.timestamp / 1 days);
-        for (uint64 back = 0; back <= 7; ++back) {
-            uint64 day = today - back;
-            if (!settlementSource.hasClose(stock, day)) continue;
-            (uint256 refX8,) = settlementSource.officialClose(stock, day);
-            uint256 lo = (refX8 * (BPS - MAX_OPENING_DEVIATION_BPS)) / BPS;
-            uint256 hi = (refX8 * (BPS + MAX_OPENING_DEVIATION_BPS)) / BPS;
-            if (referencePriceX8 < lo || referencePriceX8 > hi) {
-                revert OpeningPriceOutOfBand(refX8, referencePriceX8);
-            }
-            return;
+        (uint256 refX8,) = settlementSource.referencePrice(stock);
+        uint256 lo = (refX8 * (BPS - MAX_OPENING_DEVIATION_BPS)) / BPS;
+        uint256 hi = (refX8 * (BPS + MAX_OPENING_DEVIATION_BPS)) / BPS;
+        if (referencePriceX8 < lo || referencePriceX8 > hi) {
+            revert OpeningPriceOutOfBand(refX8, referencePriceX8);
         }
-        revert OpeningPriceOutOfBand(0, referencePriceX8);
     }
 
     // ------------------------------------------------------------------------------------------
@@ -244,7 +257,8 @@ contract FletcherLaunchpad is IUnlockCallback, ReentrancyGuard {
     /// caller's payload shape, so a launch payload cannot be replayed down the collection path.
     enum Op {
         Seed,
-        Collect
+        Collect,
+        Withdraw
     }
 
     function unlockCallback(bytes calldata raw) external override returns (bytes memory) {
@@ -252,6 +266,10 @@ contract FletcherLaunchpad is IUnlockCallback, ReentrancyGuard {
         (Op op, bytes memory payload) = abi.decode(raw, (Op, bytes));
         if (op == Op.Collect) {
             _collect(abi.decode(payload, (address)));
+            return "";
+        }
+        if (op == Op.Withdraw) {
+            _withdraw(abi.decode(payload, (address)));
             return "";
         }
         CallbackData memory d = abi.decode(payload, (CallbackData));
@@ -367,8 +385,67 @@ contract FletcherLaunchpad is IUnlockCallback, ReentrancyGuard {
         poolManager.unlock(abi.encode(Op.Collect, abi.encode(series)));
     }
 
-    /// @dev A liquidity delta of zero returns the fees owed and cannot move principal. This is the
-    /// entire locking mechanism: no other call site passes a delta.
+    /// @notice When `withdrawPrincipal` becomes callable for a launch.
+    function unlockedAt(address series) public view returns (uint256) {
+        return uint256(Series(series).maturity()) + LIQUIDITY_UNLOCK_DELAY;
+    }
+
+    /// @notice Return the seeded liquidity to the launcher, once the instrument is long over.
+    ///
+    /// Only the launcher may call it, and only after `unlockedAt`. Fees accrued up to that point
+    /// come out with it, since removing the position settles them in the same delta.
+    function withdrawPrincipal(address series) external nonReentrant {
+        Launch storage l = launches[series];
+        if (l.series == address(0)) revert UnknownSeries();
+        if (msg.sender != l.launcher) revert NotLauncher();
+
+        uint256 unlocked = unlockedAt(series);
+        if (block.timestamp < unlocked) revert StillLocked(unlocked);
+        if (l.floorLiquidity == 0 && l.turboLiquidity == 0) revert AlreadyWithdrawn();
+
+        poolManager.unlock(abi.encode(Op.Withdraw, abi.encode(series)));
+    }
+
+    /// @dev Removes both positions in full and pays everything out to the launcher. The recorded
+    /// liquidity is zeroed first, so a re-entrant or repeated call has nothing left to remove.
+    function _withdraw(address series) internal {
+        Launch storage l = launches[series];
+        uint128 floorLiquidity = l.floorLiquidity;
+        uint128 turboLiquidity = l.turboLiquidity;
+        l.floorLiquidity = 0;
+        l.turboLiquidity = 0;
+
+        if (floorLiquidity != 0) {
+            _removeAll(l.floorKey, l.tickLower, l.tickUpper, floorLiquidity, l.launcher);
+        }
+        if (turboLiquidity != 0) {
+            _removeAll(l.turboKey, l.tickLower, l.tickUpper, turboLiquidity, l.launcher);
+        }
+        emit PrincipalWithdrawn(series, l.launcher, floorLiquidity, turboLiquidity);
+    }
+
+    function _removeAll(PoolKey memory key, int24 tickLower, int24 tickUpper, uint128 liquidity, address to)
+        internal
+    {
+        (BalanceDelta delta, BalanceDelta fees) = poolManager.modifyLiquidity(
+            key,
+            ModifyLiquidityParams({
+                tickLower: tickLower,
+                tickUpper: tickUpper,
+                liquidityDelta: -int256(uint256(liquidity)),
+                salt: bytes32(0)
+            }),
+            ""
+        );
+        // `delta` is the principal returned; `fees` is what had accrued. Both are owed to the
+        // launcher, and both are positive here because the position is only ever being reduced.
+        _take(key.currency0, to, uint256(uint128(delta.amount0() + fees.amount0())));
+        _take(key.currency1, to, uint256(uint128(delta.amount1() + fees.amount1())));
+    }
+
+    /// @dev A liquidity delta of zero returns the fees owed and cannot move principal. This is what
+    /// locks the position for the life of the instrument: the only other call site that passes a
+    /// delta is `_withdraw`, and it is gated on `unlockedAt`.
     function _collect(address series) internal {
         Launch storage l = launches[series];
         (BalanceDelta floorFees,) = poolManager.modifyLiquidity(

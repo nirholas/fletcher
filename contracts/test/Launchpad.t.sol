@@ -210,6 +210,69 @@ contract LaunchpadTest is Test {
         assertEq(nvda.balanceOf(address(launchpad)), 0, "nothing accumulates between launches");
     }
 
+    /// @notice Locking a launcher's principal FOREVER is right for a perpetual token and wrong for
+    /// a dated one. After settlement both legs are fixed claims and then, once redeemed, worth
+    /// nothing, so liquidity left in those pools is principal destroyed on a book nobody will trade
+    /// again. A launchpad whose only rational participant is someone happy to burn their stake has
+    /// no participants.
+    function test_principalIsLockedForTheLifeOfTheInstrumentAndNotLonger() public {
+        address series = _launch(1000e18);
+        uint256 unlocked = launchpad.unlockedAt(series);
+
+        // Locked while the instrument is live.
+        vm.prank(launcher);
+        vm.expectRevert(abi.encodeWithSelector(FletcherLaunchpad.StillLocked.selector, unlocked));
+        launchpad.withdrawPrincipal(series);
+
+        // Still locked the second before it lifts, which is what makes it a lock rather than a wish.
+        vm.warp(unlocked - 1);
+        vm.prank(launcher);
+        vm.expectRevert(abi.encodeWithSelector(FletcherLaunchpad.StillLocked.selector, unlocked));
+        launchpad.withdrawPrincipal(series);
+
+        // And returns the position once the instrument is long over.
+        vm.warp(unlocked);
+        FletcherLaunchpad.Launch memory before = launchpad.launchOf(series);
+        assertGt(before.floorLiquidity, 0);
+
+        vm.prank(launcher);
+        launchpad.withdrawPrincipal(series);
+
+        assertEq(pm.getLiquidity(before.floorKey.toId()), 0, "FLOOR position closed");
+        assertEq(pm.getLiquidity(before.turboKey.toId()), 0, "TURBO position closed");
+    }
+
+    function test_onlyTheLauncherMayWithdraw() public {
+        address series = _launch(1000e18);
+        vm.warp(launchpad.unlockedAt(series));
+
+        vm.prank(address(0xDEAD));
+        vm.expectRevert(FletcherLaunchpad.NotLauncher.selector);
+        launchpad.withdrawPrincipal(series);
+    }
+
+    function test_principalCannotBeWithdrawnTwice() public {
+        address series = _launch(1000e18);
+        vm.warp(launchpad.unlockedAt(series));
+
+        vm.prank(launcher);
+        launchpad.withdrawPrincipal(series);
+
+        vm.prank(launcher);
+        vm.expectRevert(FletcherLaunchpad.AlreadyWithdrawn.selector);
+        launchpad.withdrawPrincipal(series);
+    }
+
+    /// @notice The unlock sits a full grace period past maturity, so holders slow to redeem still
+    /// find a market rather than the launcher pulling the book the moment the bell rings.
+    function test_theUnlockIsAGracePeriodPastMaturity() public {
+        address series = _launch(1000e18);
+        assertEq(
+            launchpad.unlockedAt(series),
+            uint256(Series(series).maturity()) + launchpad.LIQUIDITY_UNLOCK_DELAY()
+        );
+    }
+
     function test_unlockCallbackIsNotCallableDirectly() public {
         vm.expectRevert(FletcherLaunchpad.NotPoolManager.selector);
         launchpad.unlockCallback("");

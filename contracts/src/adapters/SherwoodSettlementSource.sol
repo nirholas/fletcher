@@ -63,7 +63,7 @@ contract SherwoodSettlementSource is ISettlementSource {
     event CloseRecorded(address indexed stock, uint64 indexed tradingDay, uint256 priceX8, address indexed by);
 
     error AlreadyRecorded(address stock, uint64 tradingDay);
-    error SessionOpen(address stock);
+    error SessionNotClosed(address stock, uint8 session);
     error PriceUnusable(address stock, SherwoodPriceStatus status);
     error DayNotOver(uint64 tradingDay);
     error NoClose(address stock, uint64 tradingDay);
@@ -84,8 +84,13 @@ contract SherwoodSettlementSource is ISettlementSource {
         // print under a name that claims otherwise.
         if (block.timestamp < (uint256(tradingDay) + 1) * 1 days) revert DayNotOver(tradingDay);
 
+        // `Closed` only. An earlier version also accepted `Post`, which is a live session: prices
+        // move after hours, so the first caller to record chose which after-hours print became the
+        // settlement price for every series dated to that day. The caller must not be able to pick
+        // the number, and allowing any session in which the price still moves hands them exactly
+        // that. `Halted` is excluded too: a halted listing has no close to speak of.
         SherwoodSession session = oracle.sessionOf(stock);
-        if (session == SherwoodSession.Regular || session == SherwoodSession.Pre) revert SessionOpen(stock);
+        if (session != SherwoodSession.Closed) revert SessionNotClosed(stock, uint8(session));
 
         (, SherwoodPriceStatus status) = oracle.peek(stock);
         if (status != SherwoodPriceStatus.OK) revert PriceUnusable(stock, status);
@@ -118,6 +123,19 @@ contract SherwoodSettlementSource is ISettlementSource {
     /// @inheritdoc ISettlementSource
     function hasClose(address stock, uint64 tradingDay) external view override returns (bool) {
         return closes[stock][tradingDay].recorded;
+    }
+
+    /// @inheritdoc ISettlementSource
+    ///
+    /// @dev Sherwood's live quote, which already carries a reporter quorum and a TWAP cross-check
+    /// and reports a non-`OK` status when it is stale, paused or deviating. Nothing is recorded and
+    /// nothing can lapse, which is the point: creation must not depend on a history.
+    function referencePrice(address stock) external view override returns (uint256 priceX8, uint64 observedAt) {
+        (, SherwoodPriceStatus status) = oracle.peek(stock);
+        if (status != SherwoodPriceStatus.OK) revert PriceUnusable(stock, status);
+        priceX8 = oracle.pricePerShare1e8(stock);
+        if (priceX8 == 0) revert PriceUnusable(stock, SherwoodPriceStatus.NoQuote);
+        return (priceX8, uint64(block.timestamp));
     }
 
     /// @inheritdoc ISettlementSource
