@@ -1,0 +1,28 @@
+# fletcher
+
+> Turbos and floors for tokenized stocks on Robinhood Chain
+
+fletcher is an open-source repository by nirholas, part of the three.ws ecosystem.
+
+## Docs
+
+- [README](https://github.com/nirholas/fletcher/blob/HEAD/README.md): install, usage and reference
+- [Why this shape](https://github.com/nirholas/fletcher/blob/HEAD/README.md#why-this-shape)
+- [Why there is no liquidation engine](https://github.com/nirholas/fletcher/blob/HEAD/README.md#why-there-is-no-liquidation-engine)
+- [Why it never settles against a pool](https://github.com/nirholas/fletcher/blob/HEAD/README.md#why-it-never-settles-against-a-pool)
+- [Corporate actions, and the one genuinely hard problem](https://github.com/nirholas/fletcher/blob/HEAD/README.md#corporate-actions-and-the-one-genuinely-hard-problem)
+- [Launch it like a launchpad, not a desk](https://github.com/nirholas/fletcher/blob/HEAD/README.md#launch-it-like-a-launchpad-not-a-desk)
+- [What is in the box](https://github.com/nirholas/fletcher/blob/HEAD/README.md#what-is-in-the-box)
+- [Quick start](https://github.com/nirholas/fletcher/blob/HEAD/README.md#quick-start)
+- [Using the SDK](https://github.com/nirholas/fletcher/blob/HEAD/README.md#using-the-sdk)
+- [AGENTS.md](https://github.com/nirholas/fletcher/blob/HEAD/AGENTS.md): guidance for coding agents
+- [Full text for LLMs](https://github.com/nirholas/fletcher/blob/HEAD/llms-full.txt): the README inlined
+
+## Project
+
+- [Source](https://github.com/nirholas/fletcher)
+- [Issues](https://github.com/nirholas/fletcher/issues)
+- [Discussions](https://github.com/nirholas/fletcher/discussions)
+- [Homepage](https://three.ws)
+- [three.ws](https://three.ws): the platform this is part of
+- [All repositories by nirholas](https://github.com/nirholas/nirholas#readme)
