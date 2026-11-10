@@ -1,0 +1,22 @@
+{
+  "name": "fletcher",
+  "owner": {
+    "name": "nirholas"
+  },
+  "description": "Quote and read FLOOR/TURBO series on Robinhood Chain with the Fletcher TypeScript SDK.",
+  "plugins": [
+    {
+      "name": "fletcher-sdk",
+      "source": "./plugins/fletcher-sdk",
+      "description": "Quote and read FLOOR/TURBO series on Robinhood Chain with the Fletcher TypeScript SDK.",
+      "category": "finance",
+      "tags": [
+        "robinhood-chain",
+        "sdk",
+        "turbo",
+        "floor",
+        "viem"
+      ]
+    }
+  ]
+}
