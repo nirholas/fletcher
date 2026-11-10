@@ -1,0 +1,17 @@
+{
+  "name": "fletcher-sdk",
+  "version": "0.1.0",
+  "description": "Quote and read FLOOR/TURBO series on Robinhood Chain with the Fletcher TypeScript SDK.",
+  "author": {
+    "name": "nirholas"
+  },
+  "repository": "https://github.com/nirholas/fletcher",
+  "homepage": "https://three.ws",
+  "keywords": [
+    "robinhood-chain",
+    "sdk",
+    "turbo",
+    "floor",
+    "viem"
+  ]
+}
